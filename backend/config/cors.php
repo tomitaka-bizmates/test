@@ -2,8 +2,8 @@
 
 return [
 
-    /*graphqlエンドポイント設定*/ 
-    'paths' => ['api/*', 'graphql', 'graphql-playground'],
+    // CORS config
+    'paths' => ['api/*', 'graphql', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
     // NuxtアプリケーションのURLを許可
