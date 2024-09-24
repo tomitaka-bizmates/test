@@ -63,4 +63,6 @@ services:
       PMA_PASSWORD: '${DB_PASSWORD}'
     depends_on:
       - mysql
+    env_file:
+      - ./.env
  
