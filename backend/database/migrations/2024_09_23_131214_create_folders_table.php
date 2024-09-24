@@ -9,10 +9,11 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
         Schema::create('folders', function (Blueprint $table) {
-            $table->id();
+            $table->increments('id');
+            $table->string('title', 20);
             $table->timestamps();
         });
     }
@@ -22,10 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::create('folders', function (Blueprint $table) {
-            $table->increments('id');
-            $table->string('title', 20);
-            $table->timestamps();
-        });
+        Schema::dropIfExists('folders');
     }
 };
