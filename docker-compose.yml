@@ -18,8 +18,8 @@ services:
     tty: true
     volumes:
       - ./backend:/var/www
-    ports:
-      - '8000:8000'
+    # ports:
+    #   - '8000:8000'
     env_file:
       - ./backend/.env
     depends_on:
@@ -45,7 +45,7 @@ services:
     container_name: "nginx_test"
     # ポートフォワードの指定（ホスト側ポート：コンテナ側ポート）
     ports:
-      - 80:80
+      - 8000:80
     # ボリュームを設定する（ホスト側ディレクトリ:コンテナ側ボリュームの場所）
     volumes:
       - ./src:/var/www
@@ -53,10 +53,10 @@ services:
     # サービスの依存関係を指定（nginxをphpに依存させる）
     depends_on:
       - backend
-      - frontend
+      # - frontend
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin
     platform: linux/amd64
     restart: always
     ports:
