@@ -2,13 +2,18 @@
 import { ref, onMounted } from 'vue'
 import { request, gql, GraphQLClient } from 'graphql-request'
 
-const endpoint = 'http://localhost:8888/graphql' // Lighthouseのエンドポイント
-
-// GraphQLクライアントのインスタンスを作成
+const endpoint = 'http://localhost:8888/graphql' 
 const graphqlClient = new GraphQLClient(endpoint)
 
+const folders = ref([])
+const title =ref("")
+const selectedFolderId = ref(null)
+const editingFolderId = ref(null) // 編集中のフォルダーIDを管理
+const editTitle = ref("") // 編集用のタイトル
+
+
 // GraphQLクエリ
-const GET_FOLDERS = gql`
+const GET_FOLDER = gql`
   query GetFolders($first: Int!) {
     folders(first: $first) {
       data {
@@ -26,37 +31,109 @@ const GET_FOLDERS = gql`
   }
 `
 
-// データとエンドポイントを定義
-const folders = ref([])
-const selectedFolderId = ref(null)
+const CREATE_FOLDER = gql`
+  mutation CreateFolder($title: String!) {
+    createFolder(title: $title) {
+      id
+      title
+      created_at
+      updated_at
+    }
+  }
+`
 
-// コンポーネントがマウントされたときにデータを取得
+const UPDATE_FOLDER = gql`
+  mutation UpdateFolder($id: ID!, $title: String!) {
+    updateFolder(id: $id, title: $title) {
+      id
+      title
+      updated_at
+    }
+  }
+`
+
+const DELETE_FOLDER = gql`
+  mutation DeleteFolder($id: ID!) {
+    deleteFolder(id: $id) {
+      id
+      title
+    }
+  }
+`
+
+//フォルダーのREAD
 const fetchFolders = async () => {
   try {
     const variables = { first: 10 }
-    const response = await graphqlClient.request(GET_FOLDERS, variables)
+    const response = await graphqlClient.request(GET_FOLDER, variables)
     folders.value = response.folders.data
   } catch (error) {
     console.error('Error fetching folders:', error)
   }
 }
+//フォルダーのCREATE
+const createFolder = async () => {
+  try {
+    const variables = { title: title.value }
+    const response = await graphqlClient.request(CREATE_FOLDER, variables)
+    const newFolder = response.createFolder
+    console.log(response)
+    // 新しく作成されたフォルダをリストに追加
+    folders.value.push(newFolder)
+    title.value = ''  // 入力をクリア
+    console.log('フォルダ作成成功:', response)
+    // フォルダのリストを更新するなどの処理
+  } catch (error) {
+    console.error('フォルダ作成エラー:', error)
+  }
+}
+//フォルダーのUPDATE
+const updateFolder = async (id, newTitle) => {
+  try {
+    const variables = { id, title: newTitle }
+    const response = await graphqlClient.request(UPDATE_FOLDER, variables)
+    const folder = folders.value.find(folder => folder.id === id)
+    if (folder) folder.title = newTitle
+    editingFolderId.value = null // 編集モード終了
+  } catch (error) {
+    console.error('フォルダ更新エラー:', error)
+  }
+}
 
-// フォルダを選択
+const deleteFolder = async (id) => {
+  try {
+    const variables = { id }
+    const response = await graphqlClient.request(DELETE_FOLDER, variables)
+    folders.value = folders.value.filter(folder => folder.id !== id)
+    // reloadNuxtApp()
+    console.log('フォルダ削除成功:', response)
+
+    // フォルダのリストを更新するなどの処理
+  } catch (error) {
+    console.error('フォルダ削除エラー:', error)
+  }
+}
+
 const selectFolder = (folderId) => {
   selectedFolderId.value = folderId
 }
-// 削除処理（未実装）
-const deleteFolder = (folderId) => {
-  console.log(`フォルダID: ${folderId} を削除します`)
+
+
+
+const editFolder = (folder) => {
+  editingFolderId.value = folder.id // 編集中のフォルダーIDをセット
+  editTitle.value = folder.title // 編集中のタイトルをセット
 }
 
-// 編集処理（未実装）
-const editFolder = (folderId) => {
-  console.log(`フォルダID: ${folderId} を編集します`)
+const saveEdit = async (folderId) => {
+  await updateFolder(folderId, editTitle.value)
+}
+
+const cancelEdit = () => {
+  editingFolderId.value = null // 編集モードを解除
 }
 
 
-// ページがマウントされた時にデータを取得
 onMounted(() => {
   fetchFolders()
 })
@@ -65,8 +142,8 @@ onMounted(() => {
 <template>
     <div class="folder-container">
       <h2>フォルダ</h2>
-      <input type="text" placeholder="フォルダを追加する" />
-      <button>フォルダを追加する</button>
+      <input type="text" v-model="title" placeholder="フォルダを追加する" />
+      <button @click="createFolder">フォルダを追加する</button>
   
       <ul>
         <li
@@ -75,11 +152,25 @@ onMounted(() => {
           :class="{ selected: folder.id === selectedFolderId }"
           @click="selectFolder(folder.id)"
         >
-          {{ folder.title }}
+          <!-- {{ folder.title }}
           <span class="actions">
             <button @click.stop="editFolder(folder.id)">編集</button>
-            <button @click.stop="deleteFolder(folder.id)">削除</button>
+            <button @click="deleteFolder(folder.id)">削除</button> -->
+          <!-- </span> -->
+          <template v-if="editingFolderId === folder.id">
+          <input type="text" v-model="editTitle" />
+          <span class="actions">
+            <button @click="saveEdit(folder.id)">保存</button>
+            <button @click="cancelEdit">戻る</button>
           </span>
+        </template>
+        <template v-else>
+          {{ folder.title }}
+          <span class="actions">
+            <button @click.stop="editFolder(folder)">編集</button>
+            <button @click="deleteFolder(folder.id)">削除</button>
+          </span>
+        </template>
         </li>
       </ul>
     </div>
@@ -87,9 +178,9 @@ onMounted(() => {
   
   <style scoped>
   .folder-container {
-    /* width: 300px; */
+    width: 500px;
     margin: 20px;
-    padding: 10px;
+    padding: 20px;
     border: 1px solid #ccc;
     border-radius: 8px;
     background-color: #f9f9f9;
@@ -106,6 +197,7 @@ onMounted(() => {
     margin-bottom: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    box-sizing: border-box;
   }
   
   button {
@@ -154,6 +246,7 @@ onMounted(() => {
     color: #007bff;
     border: none;
     cursor: pointer;
+    width: 80px;
   }
   
   .actions button:hover {
