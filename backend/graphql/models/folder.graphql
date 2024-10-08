@@ -6,12 +6,12 @@ type Folder{
 }
 
 type Query {
-  folders: [Folder!]! @field(resolver: "App\\GraphQL\\Queries\\FolderQuery@folders")
-  folder(id: ID!): Folder @field(resolver: "App\\GraphQL\\Queries\\FolderQuery@folder")
+  folders:[Folder!]! @all
+  
 }
 
-type Mutation {
-  createFolder(name: String!, description: String): Folder @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@createFolder")
-  updateFolder(id: ID!, name: String, description: String): Folder @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@updateFolder")
-  deleteFolder(id: ID!): Boolean @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@deleteFolder")
-}
+# type Mutation {
+#   createFolder(name: String!, description: String): Folder @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@createFolder")
+#   updateFolder(id: ID!, name: String, description: String): Folder @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@updateFolder")
+#   deleteFolder(id: ID!): Boolean @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@deleteFolder")
+# }
