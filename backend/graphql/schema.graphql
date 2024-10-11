@@ -1,5 +1,6 @@
 "A datetime string with format `Y-m-d H:i:s`, e.g. `2018-05-23 13:43:32`."
 scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
 
 "Indicates what fields are available at the top level of a query operation."
 type Folder{
@@ -7,18 +8,41 @@ type Folder{
     title:String!
     created_at:DateTime!
     updated_at:DateTime!
+    tasks:[Task!]! @hasMany(relation:"tasks")
+}
+
+type Task{
+    id:ID!
+    folder_id:ID!
+    status:Int!
+    due_date:Date!
+    created_at:DateTime!
+    updated_at:DateTime!
+    folder: Folder! @belongsTo(relation: "folder") # タスクが属するフォルダ
 }
 
 
 type Query{
     folders:[Folder!]! @paginate(defaultCount: 10)
+    # tasks(folder_id:ID! @eq):[Task!]! @find
+    tasks(folder_id: ID! @where): [Task!]! @paginate(defaultCount: 10)
+
 }
 
 
 
 type Mutation {
+##フォルダ
   createFolder(title: String!): Folder @create
   updateFolder(id: ID!, title: String!): Folder @update
   deleteFolder(id: ID! @whereKey): Folder @delete
 
+  ##タスク
+    createTask(folder_id: ID!, title: String!, status: Int!, due_date: DateTime!): Task @create
+    updateTask(id: ID!, title: String, status: Int, due_date: DateTime): Task @update
+    deleteTask(id: ID! @whereKey): Task @delete
+
 }
+
+
+

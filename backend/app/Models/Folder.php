@@ -10,5 +10,9 @@ class Folder extends Model
     use HasFactory;
     
     // protected $fillable = ['title'];
+    public function tasks() : \Illuminate\Database\Eloquent\Relations\HasMany 
+    {
+        return $this->hasMany(Task::class);
+    }
 
 }
