@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { request, gql, GraphQLClient } from 'graphql-request'
+import { gql, GraphQLClient } from 'graphql-request'
 
 const endpoint = 'http://localhost:8888/graphql' 
 const graphqlClient = new GraphQLClient(endpoint)
@@ -169,6 +169,8 @@ onMounted(() => {
           <span class="actions">
             <button @click.stop="editFolder(folder)">編集</button>
             <button @click="deleteFolder(folder.id)">削除</button>
+            <NuxtLink :to="`/folders/${folder.id}`"><p>詳細ページ</p></NuxtLink>
+         
           </span>
         </template>
         </li>
@@ -179,7 +181,7 @@ onMounted(() => {
   <style scoped>
   .folder-container {
     width: 500px;
-    margin: 20px;
+    margin: 20px auto;
     padding: 20px;
     border: 1px solid #ccc;
     border-radius: 8px;
@@ -240,7 +242,13 @@ onMounted(() => {
     display: flex;
     gap: 10px;
   }
-  
+  .actions p{
+    background-color: transparent;
+    color: #49c3d8;
+    border: none;
+    cursor: pointer;
+    width: 80px;
+  }
   .actions button {
     background-color: transparent;
     color: #007bff;
