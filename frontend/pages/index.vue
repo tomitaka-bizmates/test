@@ -239,7 +239,9 @@ onMounted(() => {
   }
   
   .actions {
+    margin-right: 10px;
     display: flex;
+    align-items: center;
     gap: 10px;
   }
   .actions p{
@@ -247,15 +249,32 @@ onMounted(() => {
     color: #49c3d8;
     border: none;
     cursor: pointer;
-    width: 80px;
   }
   .actions button {
     background-color: transparent;
-    color: #007bff;
-    border: none;
-    cursor: pointer;
-    width: 80px;
-  }
+    background-color: #007bff; 
+  color: white; 
+  border: none;
+  cursor: pointer;
+  border-radius: 4px; 
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.actions button:hover {
+  background-color: #0056b3; 
+  transform: translateY(-2px); 
+}
+
+.actions button:active {
+  background-color: #00408d; 
+  transform: translateY(0);
+}
+
+.actions button:focus {
+  outline: none; 
+  box-shadow: 0 0 0 3px rgba(186, 212, 240, 0.4); 
+}
   
   .actions button:hover {
     text-decoration: underline;

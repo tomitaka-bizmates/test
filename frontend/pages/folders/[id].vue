@@ -9,11 +9,27 @@ const folderId = route.params.id
 const folder = ref(null)
 const tasks = ref([])
 
+// タスク追加用のフォームデータ
+const newTaskTitle = ref("")
+const newTaskStatus = ref(1) // デフォルトステータス
+const newTaskDueDate = ref("")
+
+// 編集モードの管理
+const editingTaskId = ref(null)
+const editTaskTitle = ref("")
+const editTaskStatus = ref(1)
+const editTaskDueDate = ref("")
+
+// ステータスに応じてクラスを付与する関数
+const getTaskStatusClass = (status) => {
+  if (status === 1) return 'status-not-started';  // 未完了（赤色）
+  if (status === 2) return 'status-in-progress';  // 進行中（緑色）
+  if (status === 3) return 'status-completed';    // 完了（灰色）
+  return '';
+}
 
 const graphqlClient = new GraphQLClient('http://localhost:8888/graphql')
 
-// GraphQLクエリを定義
-// GraphQLクエリ
 const GET_FOLDER_AND_TASKS = gql`
   query GetFolderAndTasks($id: ID!) {
     folder(id: $id) {
@@ -28,8 +44,35 @@ const GET_FOLDER_AND_TASKS = gql`
     }
   }
 `
+const CREATE_TASK = gql`
+  mutation CreateTask($folder_id: ID!, $title: String!, $status: Int!, $due_date: Date!) {
+    createTask(folder_id: $folder_id, title: $title, status: $status, due_date: $due_date) {
+      id
+      title
+      status
+      due_date
+    }
+  }
+`
+const UPDATE_TASK = gql`
+  mutation UpdateTask($id: ID!, $title: String!, $status: Int!, $due_date: Date!) {
+    updateTask(id: $id, title: $title, status: $status, due_date: $due_date) {
+      id
+      title
+      status
+      due_date
+    }
+  }
+`
+const DELETE_TASK = gql`
+  mutation DeleteTask($id: ID!) {
+    deleteTask(id: $id) {
+      id
+    }
+  }
+`
 
-// フォルダとそのタスクを取得する関数
+
 const fetchFolderAndTasks = async () => {
   try {
     const variables = { id: folderId }
@@ -40,6 +83,69 @@ const fetchFolderAndTasks = async () => {
     console.error('Error fetching folder and tasks:', error)
   }
 }
+
+const addTask = async () => {
+  try {
+    const variables = {
+      folder_id: folderId,
+      title: newTaskTitle.value,
+      status: newTaskStatus.value,
+      due_date:newTaskDueDate.value
+    }
+    const response = await graphqlClient.request(CREATE_TASK, variables)
+    
+    // 新しいタスクをタスクリストに追加
+    tasks.value.push(response.createTask)
+
+    // フォームのリセット
+    newTaskTitle.value = ""
+    newTaskStatus.value = 1
+    newTaskDueDate.value = ""
+  } catch (error) {
+    console.error('Error adding task:', error)
+  }
+}
+
+const updateTask = async (taskId) => {
+  try {
+    const variables = {
+      id: taskId,
+      title: editTaskTitle.value,
+      status: parseInt(editTaskStatus.value),
+      due_date: editTaskDueDate.value
+    }
+    const response = await graphqlClient.request(UPDATE_TASK, variables)
+
+    // タスクリストの更新
+    const index = tasks.value.findIndex(task => task.id === taskId)
+    tasks.value[index] = response.updateTask
+
+    // 編集モードを終了
+    editingTaskId.value = null
+  } catch (error) {
+    console.error('Error updating task:', error)
+  }
+}
+const deleteTask = async (taskId) => {
+  try {
+    const variables = { id: taskId }
+    await graphqlClient.request(DELETE_TASK, variables)
+    
+    // タスクリストから削除
+    tasks.value = tasks.value.filter(task => task.id !== taskId)
+  } catch (error) {
+    console.error('Error deleting task:', error)
+  }
+}
+
+// 編集モードに入る関数
+const startEditingTask = (task) => {
+  editingTaskId.value = task.id
+  editTaskTitle.value = task.title
+  editTaskStatus.value = task.status
+  editTaskDueDate.value = task.due_date
+}
+
 
 onMounted(() => {
   fetchFolderAndTasks() // コンポーネントがマウントされたときにデータを取得
@@ -53,15 +159,54 @@ onMounted(() => {
       <h3 class="task-title">タスク一覧</h3>
       <ul class="task-list">
         <li v-for="task in tasks" :key="task.id" class="task-item">
-          <div class="task-header">
-            <span class="task-name">{{ task.title }}</span>
-            <span class="task-status">ステータス: {{ task.status }}</span>
+          <div v-if="editingTaskId === task.id">
+            <input type="text" v-model="editTaskTitle" />
+            <input type="date" v-model="editTaskDueDate" />
+            <select v-model="editTaskStatus">
+              <option value="1">未着手</option>
+              <option value="2">進行中</option>
+              <option value="3">完了</option>
+            </select>
+            <span class="actions">
+              <button @click="updateTask(task.id)">保存</button>
+              <button @click="editingTaskId = null">戻る</button>
+            </span>
           </div>
-          <div class="task-due">期日: {{ task.due_date }}</div>
+          <div v-else>
+            <div class="task-header">
+              <span class="task-name">{{ task.title }}</span>
+              <span class="task-status" :class="getTaskStatusClass(task.status)">
+                <!-- ステータスの値に応じた表示 -->
+                <span v-if="task.status === 1">未完了</span>
+                <span v-else-if="task.status === 2">進行中</span>
+                <span v-else-if="task.status === 3">完了</span>
+              </span>
+            </div>
+            <div class="task-due">期日: {{ task.due_date }}</div>
+            <span class="actions">
+              <button @click.stop="startEditingTask(task)">編集</button>
+              <button @click="deleteTask(task.id)">削除</button>
+            </span>
+          </div>
         </li>
       </ul>
+  
+      <div class="task-form">
+        <h3>新しいタスクを追加</h3>
+        <input type="text" v-model="newTaskTitle" placeholder="タスクタイトル" />
+        <input type="date" v-model="newTaskDueDate" placeholder="期日" />
+        <select v-model="newTaskStatus">
+          <option value="1">未着手</option>
+          <option value="2">進行中</option>
+          <option value="3">完了</option>
+        </select>
+        <button @click="addTask">タスクを追加</button>
+      </div>
     </div>
   </template>
+
+
+
 <style scoped>
 .folder-container {
   width: 500px;
@@ -109,10 +254,78 @@ onMounted(() => {
 
 .task-status {
   font-style: italic;
-  color: #007bff;
+  color: red;
 }
 
+.status-not-started {
+  color: red;
+}
+
+.status-in-progress {
+  color: green;
+}
+
+.status-completed {
+  color: gray;
+}
 .task-due {
   color: #555;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+    background-color: transparent;
+    background-color: #007bff; 
+  color: white; 
+  border: none;
+  cursor: pointer;
+  padding: 6px 10px; 
+  border-radius: 4px; 
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.actions button:hover {
+  background-color: #0056b3; 
+  transform: translateY(-2px); 
+}
+
+.actions button:active {
+  background-color: #00408d; 
+  transform: translateY(0);
+}
+
+.actions button:focus {
+  outline: none; 
+  box-shadow: 0 0 0 3px rgba(186, 212, 240, 0.4); 
+}
+
+.task-form {
+  margin-top: 20px;
+}
+
+.task-form input, .task-form select {
+  display: block;
+  width: 80%;
+  margin-bottom: 10px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.task-form button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.task-form button:hover {
+  background-color: #0056b3;
 }
 </style>
