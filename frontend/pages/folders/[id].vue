@@ -154,8 +154,20 @@ onMounted(() => {
 
 <template>
     <div class="folder-container">
+        <div class="task-form">
+        <h3>新しいタスクを追加</h3>
+        <input type="text" v-model="newTaskTitle" placeholder="タスクタイトル" />
+        <input type="date" v-model="newTaskDueDate" placeholder="期日" />
+        <select v-model="newTaskStatus">
+          <option value="1">未着手</option>
+          <option value="2">進行中</option>
+          <option value="3">完了</option>
+        </select>
+        <button @click="addTask">タスクを追加</button>
+      </div>
+
+      <div class="tasks">
       <h2 class="folder-title">フォルダ: {{ folder?.title }}</h2>
-      
       <h3 class="task-title">タスク一覧</h3>
       <ul class="task-list">
         <li v-for="task in tasks" :key="task.id" class="task-item">
@@ -190,18 +202,8 @@ onMounted(() => {
           </div>
         </li>
       </ul>
-  
-      <div class="task-form">
-        <h3>新しいタスクを追加</h3>
-        <input type="text" v-model="newTaskTitle" placeholder="タスクタイトル" />
-        <input type="date" v-model="newTaskDueDate" placeholder="期日" />
-        <select v-model="newTaskStatus">
-          <option value="1">未着手</option>
-          <option value="2">進行中</option>
-          <option value="3">完了</option>
-        </select>
-        <button @click="addTask">タスクを追加</button>
-      </div>
+    </div>
+   
     </div>
   </template>
 
@@ -216,6 +218,51 @@ onMounted(() => {
   border-radius: 8px;
   background-color: #f9f9f9;
 }
+.task-form {
+  margin-top: 20px;
+  margin-bottom: 40px;
+  background-color: #e3ecee;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.task-form input, .task-form select {
+  display: block;
+  width: 80%;
+  margin-bottom: 10px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.task-form button {
+    background-color: transparent;
+    background-color: #007bff; 
+  color: white; 
+  border: none;
+  cursor: pointer;
+  padding: 6px 10px; 
+  border-radius: 4px; 
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.task-form button:hover {
+    background-color: #0056b3; 
+    transform: translateY(-2px); 
+}
+
+.task-form button:active {
+  background-color: #00408d; 
+  transform: translateY(0);
+}
+
+.task-form button:focus {
+  outline: none; 
+  box-shadow: 0 0 0 3px rgba(186, 212, 240, 0.4); 
+}
+/* .tasks{
+    padding: 2px;
+} */
 
 .folder-title {
   font-size: 24px;
@@ -304,28 +351,4 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(186, 212, 240, 0.4); 
 }
 
-.task-form {
-  margin-top: 20px;
-}
-
-.task-form input, .task-form select {
-  display: block;
-  width: 80%;
-  margin-bottom: 10px;
-  padding: 10px;
-  font-size: 16px;
-}
-
-.task-form button {
-  padding: 10px 15px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.task-form button:hover {
-  background-color: #0056b3;
-}
 </style>
