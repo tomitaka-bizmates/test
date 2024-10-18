@@ -2,10 +2,12 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { gql, GraphQLClient } from 'graphql-request'
-const route =useRoute();
-console.log(route.name)
+
+// ルート情報の取得
+const route = useRoute();
 const folderId = route.params.id
 
+// データの定義
 const folder = ref(null)
 const tasks = ref([])
 
@@ -20,6 +22,16 @@ const editTaskTitle = ref("")
 const editTaskStatus = ref(1)
 const editTaskDueDate = ref("")
 
+// エラーメッセージの定義
+const newTaskErrors = ref({
+  title: '',
+  due_date: '',
+});
+const newEditTaskErrors = ref({
+  title: '',
+  due_date: '',
+});
+
 // ステータスに応じてクラスを付与する関数
 const getTaskStatusClass = (status) => {
   if (status === 1) return 'status-not-started';  // 未完了（赤色）
@@ -28,8 +40,10 @@ const getTaskStatusClass = (status) => {
   return '';
 }
 
+// GraphQLクライアントの設定
 const graphqlClient = new GraphQLClient('http://localhost:8888/graphql')
 
+// GraphQLクエリとミューテーションの定義
 const GET_FOLDER_AND_TASKS = gql`
   query GetFolderAndTasks($id: ID!) {
     folder(id: $id) {
@@ -72,7 +86,59 @@ const DELETE_TASK = gql`
   }
 `
 
+// 新規タスク追加時のバリデーション関数
+const validateNewTask = () => {
+  let isValid = true;
 
+  // タイトルが空かチェック
+  if (!newTaskTitle.value.trim()) {
+    newTaskErrors.value.title = 'タスクタイトルは必須です。';
+    isValid = false;
+  } else {
+    newTaskErrors.value.title = '';
+  }
+
+  // 期日が正しく入力されているかチェック
+  if (!newTaskDueDate.value) {
+    newTaskErrors.value.due_date = '期日は必須です。';
+    isValid = false;
+  } else if (new Date(newTaskDueDate.value) < new Date().setHours(0, 0, 0, 0)) {  // 今日より前の日付をチェック
+    newTaskErrors.value.due_date = '期日は今日以降の日付を選択してください。';
+    isValid = false;
+  } else {
+    newTaskErrors.value.due_date = '';
+  }
+
+  return isValid;
+};
+
+// 編集タスクのバリデーション関数
+const validateNewEditTask = () => {
+  let isValid = true;
+
+  // タイトルが空かチェック
+  if (!editTaskTitle.value.trim()) {  // 修正: newEditTaskTitle -> editTaskTitle
+    newEditTaskErrors.value.title = 'タスクタイトルは必須です。';
+    isValid = false;
+  } else {
+    newEditTaskErrors.value.title = '';
+  }
+
+  // 期日が正しく入力されているかチェック
+  if (!editTaskDueDate.value) {  // 修正: newTaskDueDate -> editTaskDueDate
+    newEditTaskErrors.value.due_date = '期日は必須です。';
+    isValid = false;
+  } else if (new Date(editTaskDueDate.value) < new Date().setHours(0, 0, 0, 0)) {  // 今日より前の日付をチェック
+    newEditTaskErrors.value.due_date = '期日は今日以降の日付を選択してください。';
+    isValid = false;
+  } else {
+    newEditTaskErrors.value.due_date = '';
+  }
+
+  return isValid;
+};
+
+// フォルダとタスクの取得関数
 const fetchFolderAndTasks = async () => {
   try {
     const variables = { id: folderId }
@@ -84,13 +150,17 @@ const fetchFolderAndTasks = async () => {
   }
 }
 
+// タスクを追加する関数
 const addTask = async () => {
+  if (!validateNewTask()) {
+    return;
+  }
   try {
     const variables = {
       folder_id: folderId,
       title: newTaskTitle.value,
       status: newTaskStatus.value,
-      due_date:newTaskDueDate.value
+      due_date: newTaskDueDate.value
     }
     const response = await graphqlClient.request(CREATE_TASK, variables)
     
@@ -103,10 +173,15 @@ const addTask = async () => {
     newTaskDueDate.value = ""
   } catch (error) {
     console.error('Error adding task:', error)
+    alert('タスクの追加に失敗しました。再度お試しください。')
   }
 }
 
+// タスクを更新する関数
 const updateTask = async (taskId) => {
+  if (!validateNewEditTask()) {
+    return;
+  }
   try {
     const variables = {
       id: taskId,
@@ -118,14 +193,19 @@ const updateTask = async (taskId) => {
 
     // タスクリストの更新
     const index = tasks.value.findIndex(task => task.id === taskId)
-    tasks.value[index] = response.updateTask
+    if (index !== -1) {
+      tasks.value[index] = response.updateTask
+    }
 
     // 編集モードを終了
     editingTaskId.value = null
   } catch (error) {
     console.error('Error updating task:', error)
+    alert('タスクの編集に失敗しました。再度お試しください。')
   }
 }
+
+// タスクを削除する関数
 const deleteTask = async (taskId) => {
   try {
     const variables = { id: taskId }
@@ -146,18 +226,23 @@ const startEditingTask = (task) => {
   editTaskDueDate.value = task.due_date
 }
 
-
+// コンポーネントがマウントされたときにデータを取得
 onMounted(() => {
-  fetchFolderAndTasks() // コンポーネントがマウントされたときにデータを取得
+  fetchFolderAndTasks()
 })
 </script>
 
 <template>
     <div class="folder-container">
-        <div class="task-form">
+      <!-- 新しいタスクを追加するフォーム -->
+      <div class="task-form">
         <h3>新しいタスクを追加</h3>
         <input type="text" v-model="newTaskTitle" placeholder="タスクタイトル" />
+        <span v-if="newTaskErrors.title" class="error">{{ newTaskErrors.title }}</span>
+  
         <input type="date" v-model="newTaskDueDate" placeholder="期日" />
+        <span v-if="newTaskErrors.due_date" class="error">{{ newTaskErrors.due_date }}</span>
+  
         <select v-model="newTaskStatus">
           <option value="1">未着手</option>
           <option value="2">進行中</option>
@@ -165,51 +250,63 @@ onMounted(() => {
         </select>
         <button @click="addTask">タスクを追加</button>
       </div>
-
+  
+      <!-- タスク一覧 -->
       <div class="tasks">
-      <h2 class="folder-title">フォルダ: {{ folder?.title }}</h2>
-      <h3 class="task-title">タスク一覧</h3>
-      <ul class="task-list">
-        <li v-for="task in tasks" :key="task.id" class="task-item">
-          <div v-if="editingTaskId === task.id">
-            <input type="text" v-model="editTaskTitle" />
-            <input type="date" v-model="editTaskDueDate" />
-            <select v-model="editTaskStatus">
-              <option value="1">未着手</option>
-              <option value="2">進行中</option>
-              <option value="3">完了</option>
-            </select>
-            <span class="actions">
-              <button @click="updateTask(task.id)">保存</button>
-              <button @click="editingTaskId = null">戻る</button>
-            </span>
-          </div>
-          <div v-else>
-            <div class="task-header">
-              <span class="task-name">{{ task.title }}</span>
-              <span class="task-status" :class="getTaskStatusClass(task.status)">
-                <!-- ステータスの値に応じた表示 -->
-                <span v-if="task.status === 1">未完了</span>
-                <span v-else-if="task.status === 2">進行中</span>
-                <span v-else-if="task.status === 3">完了</span>
+        <h2 class="folder-title">フォルダ: {{ folder?.title }}</h2>
+        <h3 class="task-title">タスク一覧</h3>
+        <ul class="task-list">
+          <li v-for="task in tasks" :key="task.id" class="task-item">
+            <!-- 編集モード -->
+            <div v-if="editingTaskId === task.id">
+              <input type="text" v-model="editTaskTitle" />
+              <span v-if="newEditTaskErrors.title" class="error">{{ newEditTaskErrors.title }}</span>
+  
+              <input type="date" v-model="editTaskDueDate" />
+              <span v-if="newEditTaskErrors.due_date" class="error">{{ newEditTaskErrors.due_date }}</span>
+  
+              <select v-model="editTaskStatus">
+                <option value="1">未着手</option>
+                <option value="2">進行中</option>
+                <option value="3">完了</option>
+              </select>
+              <span class="actions">
+                <button @click="updateTask(task.id)">保存</button>
+                <button @click="editingTaskId = null">戻る</button>
               </span>
             </div>
-            <div class="task-due">期日: {{ task.due_date }}</div>
-            <span class="actions">
-              <button @click.stop="startEditingTask(task)">編集</button>
-              <button @click="deleteTask(task.id)">削除</button>
-            </span>
-          </div>
-        </li>
-      </ul>
-    </div>
-   
+  
+            <!-- 通常表示モード -->
+            <div v-else>
+              <div class="task-header">
+                <span class="task-name">{{ task.title }}</span>
+                <span class="task-status" :class="getTaskStatusClass(task.status)">
+                  <!-- ステータスの値に応じた表示 -->
+                  <span v-if="task.status === 1">未完了</span>
+                  <span v-else-if="task.status === 2">進行中</span>
+                  <span v-else-if="task.status === 3">完了</span>
+                </span>
+              </div>
+              <div class="task-due">期日: {{ task.due_date }}</div>
+              <span class="actions">
+                <button @click.stop="startEditingTask(task)">編集</button>
+                <button @click="deleteTask(task.id)">削除</button>
+              </span>
+            </div>
+          </li>
+        </ul>
+      </div>
     </div>
   </template>
 
-
-
 <style scoped>
+.error {
+  color: red;
+  font-size: 12px;
+  margin-bottom: 10px;
+  display: block;
+}
+
 .folder-container {
   width: 500px;
   margin: 20px auto;

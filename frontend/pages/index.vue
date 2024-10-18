@@ -2,17 +2,26 @@
 import { ref, onMounted } from 'vue'
 import { gql, GraphQLClient } from 'graphql-request'
 
+// GraphQLエンドポイントの設定
 const endpoint = 'http://localhost:8888/graphql' 
 const graphqlClient = new GraphQLClient(endpoint)
 
+// データの定義
 const folders = ref([])
-const title =ref("")
+const title = ref("")
 const selectedFolderId = ref(null)
 const editingFolderId = ref(null) // 編集中のフォルダーIDを管理
 const editTitle = ref("") // 編集用のタイトル
 
+// エラーメッセージの定義
+const newFolderErrors = ref({
+  title: '',
+});
+const newEditFolderErrors = ref({
+  title: ""
+})
 
-// GraphQLクエリ
+// GraphQLクエリとミューテーションの定義
 const GET_FOLDER = gql`
   query GetFolders($first: Int!) {
     folders(first: $first) {
@@ -61,7 +70,35 @@ const DELETE_FOLDER = gql`
   }
 `
 
-//フォルダーのREAD
+// 新規フォルダ作成時のバリデーション関数
+const validateNewFolder = () => {
+  let isValid = true;
+
+  if (!title.value.trim()) {  
+    newFolderErrors.value.title = 'フォルダータイトルは必須です。';
+    isValid = false;
+  } else {
+    newFolderErrors.value.title = '';
+  }
+
+  return isValid;
+};
+
+// 編集フォルダのバリデーション関数
+const validateEditNewFolder = () => {
+  let isValid = true;
+
+  if (!editTitle.value.trim()) {  
+    newEditFolderErrors.value.title = 'フォルダータイトルは必須です。';
+    isValid = false;
+  } else {
+    newEditFolderErrors.value.title = '';
+  }
+
+  return isValid;
+};
+
+// フォルダーの取得関数
 const fetchFolders = async () => {
   try {
     const variables = { first: 10 }
@@ -69,71 +106,82 @@ const fetchFolders = async () => {
     folders.value = response.folders.data
   } catch (error) {
     console.error('Error fetching folders:', error)
+    alert('フォルダの取得に失敗しました。再度お試しください。')
   }
 }
-//フォルダーのCREATE
+
+// フォルダーの作成関数
 const createFolder = async () => {
+  if (!validateNewFolder()) {
+    return;
+  }
   try {
     const variables = { title: title.value }
     const response = await graphqlClient.request(CREATE_FOLDER, variables)
     const newFolder = response.createFolder
     console.log(response)
-    // 新しく作成されたフォルダをリストに追加
     folders.value.push(newFolder)
-    title.value = ''  // 入力をクリア
+    title.value = ''  
     console.log('フォルダ作成成功:', response)
-    // フォルダのリストを更新するなどの処理
   } catch (error) {
     console.error('フォルダ作成エラー:', error)
+    alert('フォルダの作成に失敗しました。再度お試しください。')
   }
 }
-//フォルダーのUPDATE
+
+// フォルダーの更新関数
 const updateFolder = async (id, newTitle) => {
+  if (!validateEditNewFolder()) {  // 修正: 関数を呼び出す
+    return;
+  }
   try {
     const variables = { id, title: newTitle }
     const response = await graphqlClient.request(UPDATE_FOLDER, variables)
     const folder = folders.value.find(folder => folder.id === id)
     if (folder) folder.title = newTitle
-    editingFolderId.value = null // 編集モード終了
+    editingFolderId.value = null 
+    console.log('フォルダ更新成功:', response)
   } catch (error) {
     console.error('フォルダ更新エラー:', error)
+    alert('フォルダの更新に失敗しました。再度お試しください。')
   }
 }
 
+// フォルダーの削除関数
 const deleteFolder = async (id) => {
   try {
     const variables = { id }
     const response = await graphqlClient.request(DELETE_FOLDER, variables)
     folders.value = folders.value.filter(folder => folder.id !== id)
-    // reloadNuxtApp()
     console.log('フォルダ削除成功:', response)
-
-    // フォルダのリストを更新するなどの処理
   } catch (error) {
     console.error('フォルダ削除エラー:', error)
+    alert('フォルダの削除に失敗しました。再度お試しください。')
   }
 }
 
+// フォルダーを選択する関数
 const selectFolder = (folderId) => {
   selectedFolderId.value = folderId
 }
 
-
-
+// フォルダーを編集モードにする関数
 const editFolder = (folder) => {
-  editingFolderId.value = folder.id // 編集中のフォルダーIDをセット
-  editTitle.value = folder.title // 編集中のタイトルをセット
+  editingFolderId.value = folder.id 
+  editTitle.value = folder.title  // 修正: editTitle を設定
 }
 
+// 編集内容を保存する関数
 const saveEdit = async (folderId) => {
-  await updateFolder(folderId, editTitle.value)
+  await updateFolder(folderId, editTitle.value)  // 修正: editTitle.value を渡す
 }
 
+// 編集をキャンセルする関数
 const cancelEdit = () => {
-  editingFolderId.value = null // 編集モードを解除
+  editingFolderId.value = null 
 }
 
-
+// コンポーネントがマウントされたときにフォルダーを取得
 onMounted(() => {
   fetchFolders()
 })
@@ -142,9 +190,15 @@ onMounted(() => {
 <template>
     <div class="folder-container">
       <h2>フォルダ</h2>
-      <input type="text" v-model="title" placeholder="フォルダを追加する" />
-      <button @click="createFolder">フォルダを追加する</button>
-  
+      
+      <!-- 新規フォルダー追加フォーム -->
+      <div class="add-folder-form">
+        <input type="text" v-model="title" placeholder="フォルダを追加する" />
+        <span v-if="newFolderErrors.title" class="error">{{ newFolderErrors.title }}</span>
+        <button @click="createFolder">フォルダを追加する</button>
+      </div>
+      
+      <!-- フォルダー一覧 -->
       <ul>
         <li
           v-for="folder in folders"
@@ -152,107 +206,118 @@ onMounted(() => {
           :class="{ selected: folder.id === selectedFolderId }"
           @click="selectFolder(folder.id)"
         >
-          <!-- {{ folder.title }}
-          <span class="actions">
-            <button @click.stop="editFolder(folder.id)">編集</button>
-            <button @click="deleteFolder(folder.id)">削除</button> -->
-          <!-- </span> -->
+          <!-- 編集モード -->
           <template v-if="editingFolderId === folder.id">
-          <input type="text" v-model="editTitle" />
-          <span class="actions">
-            <button @click="saveEdit(folder.id)">保存</button>
-            <button @click="cancelEdit">戻る</button>
-          </span>
-        </template>
-        <template v-else>
-          {{ folder.title }}
-          <span class="actions">
-            <button @click.stop="editFolder(folder)">編集</button>
-            <button @click="deleteFolder(folder.id)">削除</button>
-            <NuxtLink :to="`/folders/${folder.id}`"><p>詳細ページ</p></NuxtLink>
-         
-          </span>
-        </template>
+            <div class="edit-form">
+              <input type="text" v-model="editTitle" />
+              <span v-if="newEditFolderErrors.title" class="error">{{newEditFolderErrors.title}}</span>
+            </div>
+            <span class="actions">
+              <button @click="saveEdit(folder.id)">保存</button>
+              <button @click="cancelEdit">戻る</button>
+            </span>
+          </template>
+  
+          <!-- 通常表示モード -->
+          <template v-else>
+            <span>{{ folder.title }}</span>
+            <span class="actions">
+              <button @click.stop="editFolder(folder)">編集</button>
+              <button @click="deleteFolder(folder.id)">削除</button>
+              <NuxtLink :to="`/folders/${folder.id}`"><p>詳細ページ</p></NuxtLink>
+            </span>
+          </template>
         </li>
       </ul>
     </div>
   </template>
   
   <style scoped>
-  .folder-container {
-    width: 500px;
-    margin: 20px auto;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-  }
-  
-  h2 {
-    font-size: 18px;
-    margin-bottom: 10px;
-  }
-  
-  input {
-    width: calc(100% - 20px);
-    padding: 5px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
-  }
-  
-  button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    margin-left: 5px;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-  }
-  
-  ul {
-    list-style-type: none;
-    padding: 0;
-  }
-  
-  li {
-    padding: 10px;
-    margin-bottom: 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #fff;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-    cursor: pointer;
-  }
-  
-  li.selected {
-    background-color: #9de3ec;
-    color: white;
-  }
-  
-  .actions {
-    margin-right: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .actions p{
-    background-color: transparent;
-    color: #49c3d8;
-    border: none;
-    cursor: pointer;
-  }
-  .actions button {
-    background-color: transparent;
-    background-color: #007bff; 
+.error {
+  color: red;
+  font-size: 12px;
+  margin-top: 5px;
+  display: block;
+}
+
+.folder-container {
+  width: 500px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.add-folder-form, .edit-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.add-folder-form input, .edit-form input {
+  padding: 5px;
+  margin-bottom: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin-top: 5px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+li {
+  padding: 10px;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* 修正: center から flex-start に変更 */
+  background-color: #fff;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  cursor: pointer;
+}
+
+li.selected {
+  background-color: #9de3ec;
+  color: white;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions p {
+  background-color: transparent;
+  color: #49c3d8;
+  border: none;
+  cursor: pointer;
+}
+
+.actions button {
+  background-color: #007bff; 
   color: white; 
   border: none;
   cursor: pointer;
@@ -275,8 +340,11 @@ onMounted(() => {
   outline: none; 
   box-shadow: 0 0 0 3px rgba(186, 212, 240, 0.4); 
 }
-  
-  .actions button:hover {
-    text-decoration: underline;
-  }
-  </style>
+
+/* 編集モードのフォームを縦方向に配置 */
+.edit-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+</style>
