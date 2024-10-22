@@ -32,6 +32,11 @@ const newEditTaskErrors = ref({
   due_date: '',
 });
 
+// ページネーションの状態
+const tasksPage = ref(1)
+const tasksLastPage = ref(1)
+const tasksHasMorePages = ref(false)
+
 // ステータスに応じてクラスを付与する関数
 const getTaskStatusClass = (status) => {
   if (status === 1) return 'status-not-started';  // 未完了（赤色）
@@ -43,21 +48,36 @@ const getTaskStatusClass = (status) => {
 // GraphQLクライアントの設定
 const graphqlClient = new GraphQLClient('http://localhost:8888/graphql')
 
-// GraphQLクエリとミューテーションの定義
-const GET_FOLDER_AND_TASKS = gql`
-  query GetFolderAndTasks($id: ID!) {
+const GET_FOLDER = gql`
+  query GetFolder($id: ID!) {
     folder(id: $id) {
       id
       title
-      tasks {
+    }
+  }
+`
+
+const GET_TASKS = gql`
+  query GetTasks($folder_id: ID!, $page: Int!, $count: Int!) {
+    tasks(folder_id: $folder_id, page: $page, count: $count) {
+      data {
         id
         title
         status
         due_date
       }
+      paginatorInfo {
+        total
+        currentPage
+        lastPage
+        hasMorePages
+      }
     }
   }
 `
+
+
+
 const CREATE_TASK = gql`
   mutation CreateTask($folder_id: ID!, $title: String!, $status: Int!, $due_date: Date!) {
     createTask(folder_id: $folder_id, title: $title, status: $status, due_date: $due_date) {
@@ -138,16 +158,36 @@ const validateNewEditTask = () => {
   return isValid;
 };
 
-// フォルダとタスクの取得関数
-const fetchFolderAndTasks = async () => {
+// フォルダの取得関数
+const fetchFolder = async () => {
   try {
     const variables = { id: folderId }
-    const response = await graphqlClient.request(GET_FOLDER_AND_TASKS, variables)
+    const response = await graphqlClient.request(GET_FOLDER, variables)
     folder.value = response.folder
-    tasks.value = response.folder.tasks
   } catch (error) {
-    console.error('Error fetching folder and tasks:', error)
+    console.error('Error fetching folder:', error)
+    alert('フォルダの取得に失敗しました。再度お試しください。')
   }
+}
+
+// タスクの取得関数
+const fetchTasks = async () => {
+  try {
+    const variables = { folder_id: folderId, page: tasksPage.value, count: 5 }
+    const response = await graphqlClient.request(GET_TASKS, variables)
+    tasks.value = response.tasks.data
+    tasksLastPage.value = response.tasks.paginatorInfo.lastPage
+    tasksHasMorePages.value = response.tasks.paginatorInfo.hasMorePages
+  } catch (error) {
+    console.error('Error fetching tasks:', error)
+    alert('タスクの取得に失敗しました。再度お試しください。')
+  }
+}
+
+// フォルダとタスクの取得関数
+const fetchFolderAndTasks = async () => {
+  await fetchFolder()
+  await fetchTasks()
 }
 
 // タスクを追加する関数
@@ -225,6 +265,20 @@ const startEditingTask = (task) => {
   editTaskStatus.value = task.status
   editTaskDueDate.value = task.due_date
 }
+// ページネーション操作関数
+const nextTasksPage = async () => {
+  if (tasksPage.value < tasksLastPage.value) {
+    tasksPage.value += 1
+    await fetchTasks()
+  }
+}
+
+const prevTasksPage = async () => {
+  if (tasksPage.value > 1) {
+    tasksPage.value -= 1
+    await fetchTasks()
+  }
+}
 
 // コンポーネントがマウントされたときにデータを取得
 onMounted(() => {
@@ -295,6 +349,11 @@ onMounted(() => {
             </div>
           </li>
         </ul>
+        <div class="pagination">
+        <button @click="prevTasksPage" :disabled="tasksPage === 1">前へ</button>
+        <span>ページ {{ tasksPage }} / {{ tasksLastPage }}</span>
+        <button @click="nextTasksPage" :disabled="!tasksHasMorePages">次へ</button>
+      </div>
       </div>
     </div>
   </template>
@@ -446,6 +505,36 @@ onMounted(() => {
 .actions button:focus {
   outline: none; 
   box-shadow: 0 0 0 3px rgba(186, 212, 240, 0.4); 
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.pagination button:hover {
+  background-color: #0056b3;
+}
+
+.pagination button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  font-weight: bold;
 }
 
 </style>

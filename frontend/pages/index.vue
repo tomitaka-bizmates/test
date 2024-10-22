@@ -116,7 +116,7 @@ const validateEditNewFolder = () => {
 // フォルダーの取得関数
 const fetchFolders = async () => {
   try {
-    const variables = { page: foldersPage.value, count: 10 }
+    const variables = { page: foldersPage.value, count: 5 }
     const response = await graphqlClient.request(GET_FOLDERS, variables)
     folders.value = response.folders.data
     foldersLastPage.value = response.folders.paginatorInfo.lastPage

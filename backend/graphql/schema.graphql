@@ -24,10 +24,10 @@ type Task{
 
 
 type Query{
-    folders(page: Int = 1, count: Int = 10): [Folder!]! @paginate(defaultCount: 10)
+    folders(page: Int = 1, count: Int = 5): [Folder!]! @paginate(defaultCount: 5)
     # tasks(folder_id:ID! @eq):[Task!]! @find
     folder(id: ID! @eq): Folder @find 
-    tasks(folder_id: ID! @where): [Task!]! @paginate(defaultCount: 10)
+    tasks(folder_id: ID! @where, page:Int=1, count: Int=5): [Task!]! @paginate(defaultCount: 5)
     task(id:ID! @eq): Task @find
 
 }
