@@ -13,6 +13,15 @@ const selectedFolderId = ref(null)
 const editingFolderId = ref(null) // 編集中のフォルダーIDを管理
 const editTitle = ref("") // 編集用のタイトル
 
+// ページネーションの状態
+const foldersPage = ref(1)
+const foldersLastPage = ref(1)
+const foldersHasMorePages = ref(false)
+
+// ローディング状態とエラーメッセージ
+const loading = ref(false)
+const errorMessage = ref('')
+
 // エラーメッセージの定義
 const newFolderErrors = ref({
   title: '',
@@ -21,10 +30,9 @@ const newEditFolderErrors = ref({
   title: ""
 })
 
-// GraphQLクエリとミューテーションの定義
-const GET_FOLDER = gql`
-  query GetFolders($first: Int!) {
-    folders(first: $first) {
+const GET_FOLDERS = gql`
+  query GetFolders($page: Int!, $count: Int!) {
+    folders(page: $page, count: $count) {
       data {
         id
         title
@@ -35,10 +43,12 @@ const GET_FOLDER = gql`
         total
         currentPage
         lastPage
+        hasMorePages
       }
     }
   }
 `
+
 
 const CREATE_FOLDER = gql`
   mutation CreateFolder($title: String!) {
@@ -70,7 +80,6 @@ const DELETE_FOLDER = gql`
   }
 `
 
-// 新規フォルダ作成時のバリデーション関数
 const validateNewFolder = () => {
   let isValid = true;
 
@@ -86,7 +95,6 @@ const validateNewFolder = () => {
   return isValid;
 };
 
-// 編集フォルダのバリデーション関数
 const validateEditNewFolder = () => {
   let isValid = true;
 
@@ -103,12 +111,16 @@ const validateEditNewFolder = () => {
   return isValid;
 };
 
+
+
 // フォルダーの取得関数
 const fetchFolders = async () => {
   try {
-    const variables = { first: 10 }
-    const response = await graphqlClient.request(GET_FOLDER, variables)
+    const variables = { page: foldersPage.value, count: 10 }
+    const response = await graphqlClient.request(GET_FOLDERS, variables)
     folders.value = response.folders.data
+    foldersLastPage.value = response.folders.paginatorInfo.lastPage
+    foldersHasMorePages.value = response.folders.paginatorInfo.hasMorePages
   } catch (error) {
     console.error('Error fetching folders:', error)
     alert('フォルダの取得に失敗しました。再度お試しください。')
@@ -134,7 +146,6 @@ const createFolder = async () => {
   }
 }
 
-// フォルダーの更新関数
 const updateFolder = async (id, newTitle) => {
   if (!validateEditNewFolder()) {  // 修正: 関数を呼び出す
     return;
@@ -152,7 +163,6 @@ const updateFolder = async (id, newTitle) => {
   }
 }
 
-// フォルダーの削除関数
 const deleteFolder = async (id) => {
   try {
     const variables = { id }
@@ -165,28 +175,39 @@ const deleteFolder = async (id) => {
   }
 }
 
-// フォルダーを選択する関数
 const selectFolder = (folderId) => {
   selectedFolderId.value = folderId
 }
 
-// フォルダーを編集モードにする関数
 const editFolder = (folder) => {
   editingFolderId.value = folder.id 
   editTitle.value = folder.title  // 修正: editTitle を設定
 }
 
-// 編集内容を保存する関数
 const saveEdit = async (folderId) => {
   await updateFolder(folderId, editTitle.value)  // 修正: editTitle.value を渡す
 }
 
-// 編集をキャンセルする関数
 const cancelEdit = () => {
   editingFolderId.value = null 
 }
 
-// コンポーネントがマウントされたときにフォルダーを取得
+// ページネーション操作関数
+const nextFoldersPage = () => {
+  if (foldersPage.value < foldersLastPage.value) {
+    foldersPage.value += 1
+    fetchFolders()
+  }
+}
+
+const prevFoldersPage = () => {
+  if (foldersPage.value > 1) {
+    foldersPage.value -= 1
+    fetchFolders()
+  }
+}
+
+
 onMounted(() => {
   fetchFolders()
 })
@@ -234,6 +255,11 @@ onMounted(() => {
           </template>
         </li>
       </ul>
+      <div class="pagination">
+        <button @click="prevFoldersPage" :disabled="foldersPage === 1">前へ</button>
+        <span>ページ {{ foldersPage }} / {{ foldersLastPage }}</span>
+        <button @click="nextFoldersPage" :disabled="!foldersHasMorePages">次へ</button>
+      </div>
     </div>
   </template>
   
@@ -352,5 +378,29 @@ li.selected {
   display: flex;
   flex-direction: column;
 }
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.pagination button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  font-weight: bold;
+}
 </style>
-フロフロ
