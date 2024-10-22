@@ -77,10 +77,12 @@ const validateNewFolder = () => {
   if (!title.value.trim()) {  
     newFolderErrors.value.title = 'フォルダータイトルは必須です。';
     isValid = false;
-  } else {
+  } else if(title.value.length>=20){
+    newFolderErrors.value.title= 'タイトルは20文字以内に設定してください'
+    isValid=false;
+  }else{
     newFolderErrors.value.title = '';
   }
-
   return isValid;
 };
 
@@ -90,6 +92,9 @@ const validateEditNewFolder = () => {
 
   if (!editTitle.value.trim()) {  
     newEditFolderErrors.value.title = 'フォルダータイトルは必須です。';
+    isValid = false;
+  } else if (editTitle.value.length > 20) { // 20文字以内を超えているかをチェック
+    newEditFolderErrors.value.title = 'タイトルは20文字以内に設定してください';
     isValid = false;
   } else {
     newEditFolderErrors.value.title = '';
@@ -348,3 +353,4 @@ li.selected {
   flex-direction: column;
 }
 </style>
+フロフロ

@@ -36,14 +36,30 @@ type Query{
 
 type Mutation {
 ##フォルダ
-    createFolder(title: String!): Folder @create
-    updateFolder(id: ID!, title: String!): Folder @update
+    createFolder(title: String! @rules(apply:["required","max:20"])): Folder @create
+    updateFolder(id: ID! @rules(apply:["required","exists:folders,id"]), title: String!): Folder @update
     deleteFolder(id: ID! @whereKey): Folder @delete
 
   ##タスク
-    createTask(folder_id: ID!, title: String!, status: Int!, due_date: Date!): Task @create
-    updateTask(id: ID!, title: String, status: Int, due_date: Date): Task @update
+   createTask(
+        folder_id: ID! @rules(apply:["required","exists:folders,id"]),
+        title: String! @rules(apply:["required"]),
+        status: Int! @rules(apply:["required", "integer", "min:1", "max:3"]),
+        due_date: Date! @rules(apply:["required", "date", "after_or_equal:today"])
+    ): Task @create
+
+    updateTask(
+        id: ID! @rules(apply:["required","exists:tasks,id"]),
+        title: String @rules(apply:["sometimes","required"]),
+        status: Int @rules(apply:["sometimes","integer", "min:1", "max:3"]),
+        due_date: Date @rules(apply:["sometimes", "date", "after_or_equal:today"])
+    ): Task @update
+
     deleteTask(id: ID! @whereKey): Task @delete
+    # createTask(folder_id: ID! @rules(apply:["required","exists:folders,id"]), title: String!, status: Int!, due_date: Date!): Task @create
+    # updateTask(id: ID!, title: String, status: Int, due_date: Date): Task @update
+    # deleteTask(id: ID! @whereKey): Task @delete
+
 
 }
 
