@@ -4,10 +4,11 @@ scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
 "Indicates what fields are available at the top level of a query operation."
 type Folder{
     id:ID!
+    user_id:ID!
     title:String!
     created_at:Date!
     updated_at:Date!
-     tasks:[Task!]! @hasMany(relation:"tasks")
+    tasks:[Task!]! @hasMany(relation:"tasks")
 }
 
 
@@ -21,6 +22,15 @@ type Task{
     updated_at:Date!
     folder: Folder! @belongsTo(relation: "folder") # タスクが属するフォルダ
 }
+type User{
+ id:ID!
+ name:String!
+ email:String!
+ password:String!
+ created_at:Date!
+ updated_at:Date!
+ folders: [Folder] @hasMany(relation:"folders")
+}
 
 
 type Query{
@@ -30,6 +40,7 @@ type Query{
     tasks(folder_id: ID! @where, page:Int=1, count: Int=5): [Task!]! @paginate(defaultCount: 5)
     task(id:ID! @eq): Task @find
 
+    #user
 }
 
 
@@ -60,6 +71,7 @@ type Mutation {
     # updateTask(id: ID!, title: String, status: Int, due_date: Date): Task @update
     # deleteTask(id: ID! @whereKey): Task @delete
 
+    register(name: String, email: String, password:String):User @create
 
 }
 
