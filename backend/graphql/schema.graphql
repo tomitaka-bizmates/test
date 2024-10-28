@@ -2,34 +2,38 @@
 scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
 
 "Indicates what fields are available at the top level of a query operation."
-type Folder{
-    id:ID!
-    user_id:ID!
-    title:String!
-    created_at:Date!
-    updated_at:Date!
-    tasks:[Task!]! @hasMany(relation:"tasks")
+type User {
+    id: ID!
+    name: String!
+    email: String!
+    created_at: Date!
+    updated_at: Date!
+    folders: [Folder] @hasMany(relation: "folders")
 }
 
-
-type Task{
-    id:ID!
-    folder_id:ID!
-    title:String!
-    status:Int!
-    due_date:Date!
-    created_at:Date!
-    updated_at:Date!
-    folder: Folder! @belongsTo(relation: "folder") # タスクが属するフォルダ
+type AuthPayload {
+    user: User!
+    token: String!
 }
-type User{
- id:ID!
- name:String!
- email:String!
- password:String!
- created_at:Date!
- updated_at:Date!
- folders: [Folder] @hasMany(relation:"folders")
+
+type Folder {
+    id: ID!
+    user_id: ID!
+    title: String!
+    created_at: Date!
+    updated_at: Date!
+    tasks: [Task!]! @hasMany(relation: "tasks")
+}
+
+type Task {
+    id: ID!
+    folder_id: ID!
+    title: String!
+    status: Int!
+    due_date: Date!
+    created_at: Date!
+    updated_at: Date!
+    folder: Folder! @belongsTo(relation: "folder")
 }
 
 
@@ -39,7 +43,7 @@ type Query{
     folder(id: ID! @eq): Folder @find 
     tasks(folder_id: ID! @where, page:Int=1, count: Int=5): [Task!]! @paginate(defaultCount: 5)
     task(id:ID! @eq): Task @find
-
+    user: User @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Queries\\UserQuery@me")
     #user
 }
 
@@ -50,6 +54,7 @@ type Mutation {
     createFolder(title: String! @rules(apply:["required","max:20"])): Folder @create
     updateFolder(id: ID! @rules(apply:["required","exists:folders,id"]), title: String!): Folder @update
     deleteFolder(id: ID! @whereKey): Folder @delete
+    
 
   ##タスク
    createTask(
@@ -71,7 +76,9 @@ type Mutation {
     # updateTask(id: ID!, title: String, status: Int, due_date: Date): Task @update
     # deleteTask(id: ID! @whereKey): Task @delete
 
-    register(name: String, email: String, password:String):User @create
+    register(name: String!, email: String!, password: String!): AuthPayload @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@register")
+    login(email: String!, password: String!): AuthPayload @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@login")
+    logout: Boolean @guard(with: ["sanctum"]) @field(resolver: "App\\GraphQL\\Mutations\\AuthMutation@logout")
 
 }
 

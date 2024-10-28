@@ -3,8 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { gql, GraphQLClient } from 'graphql-request'
 
-const endpoint = 'http://localhost:8888/graphql'; 
-const graphqlClient = new GraphQLClient(endpoint);
+const router = useRouter()
+const authToken = useCookie('auth_token') // クッキーを取得・設定
+const endpoint = 'http://localhost:8888/graphql'
+const graphqlClient = new GraphQLClient(endpoint, {
+  headers: {
+    Authorization: authToken.value ? `Bearer ${authToken.value}` : '',
+  },
+})
 
 const name = ref('');
 const email = ref('');
@@ -17,17 +23,20 @@ const errors = ref({
   confirmPassword: ''
 });
 
-const router = useRouter();
+
 
 const REGISTER_MUTATION = gql`
   mutation Register($name: String!, $email: String!, $password: String!) {
     register(name: $name, email: $email, password: $password) {
-      id
-      name
-      email
+      user {
+        id
+        name
+        email
+      }
+      token
     }
   }
-`;
+`
 const validateForm = () => {
   let isValid = true;
   errors.value = {
@@ -80,10 +89,22 @@ const register =async()=>{
     const response = await graphqlClient.request(REGISTER_MUTATION, variables);    
     console.log('登録成功:', response);
     alert('登録が完了しました！ログインページに移動します。');    
+
+    // クッキーにトークンを保存
+    authToken.value = response.register.token
+    // 認証ヘッダーを更新
+    graphqlClient.setHeader('Authorization', `Bearer ${response.register.token}`)
+
+
     router.push('/login');
   } catch (error) {
     console.error('登録エラー:', error);
+    if (error.response && error.response.errors) {
+      error.response.errors.forEach(err => {
+        alert(err.message);
+      });}else{
     alert('登録に失敗しました。再度お試しください。');
+      }
   }
 }
 
