@@ -1,13 +1,54 @@
 <script setup>
+import {gql, GraphQLClient } from 'graphql-request';
+
+
+const router = useRouter()
+
+// クッキーの設定
+const authToken = useCookie('auth_token', {
+  // maxAge: 30 * 24 * 60 * 60, // 30日（秒単位）
+  // httpOnly: false, // falseだとフロントエンドからcookieへアクセス可能に（セキュリティに注意）
+  // secure: false, // 開発環境ではfalse、本番ではtrue
+  // sameSite: 'lax',
+})
+
+const endpoint = 'http://localhost:8888/graphql'
+const graphqlClient = new GraphQLClient(endpoint, {
+  headers: {
+    Authorization: authToken.value ? `Bearer ${authToken.value}` : '',
+  },
+})
+
+const LOGOUT_MUTATION = gql`
+  mutation Logout {
+    logout
+  }
+`
+
+const logout = async () => {
+  try {
+
+    const response = await graphqlClient.request(LOGOUT_MUTATION)
+    console.log('ログアウト成功:', response)
+    authToken.value = null
+    graphqlClient.setHeader('Authorization', '')
+    alert('ログアウトが完了しました。')
+    router.push('/login')
+  } catch (error) {
+    console.error('ログアウトエラー:', error)
+    alert('ログアウトに失敗しました。再度お試しください。')
+  }
+}
+
 </script>
 
 <template>
     <header class="header">
       <div class="header-container">
         <div class="logo">
-          <a href="/">
-            <img src="/todo.png" alt="Logo" />
-          </a>
+          <NuxtLink to="/">
+          <img src="/todo.png" alt="Logo" />
+        </NuxtLink>
         </div>
         <nav class="nav">
          <h1 class="title">TODOアプリ</h1>
@@ -16,6 +57,9 @@
           <input type="text" placeholder="Search..." />
           <button>検索</button>
         </div>
+
+       <button v-if="authToken" @click="logout">ログアウト</button>
+  
       </div>
     </header>
   </template>
@@ -23,6 +67,18 @@
 
   
   <style scoped>
+  button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+  }
   .header {
     width: 100%;
     background-color: #c9d9ea;
@@ -40,8 +96,8 @@
   }
 
   .nav .title {
-  color: #007bff; /* TODOアプリの文字色を指定 (例: トマト色) */
-  font-size: 24px; /* 必要に応じてサイズも調整可能 */
+  color: #007bff; 
+  font-size: 24px; 
 }
   
   .logo img {
