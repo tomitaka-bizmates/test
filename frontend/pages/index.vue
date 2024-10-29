@@ -3,13 +3,10 @@ import { ref, onMounted } from 'vue'
 import { gql, GraphQLClient } from 'graphql-request'
 
 
-// GraphQLエンドポイントの設定
 const endpoint = 'http://localhost:8888/graphql' 
 
-// クッキーからauth_tokenを取得
 const authToken = useCookie('auth_token')
 
-// GraphQLClientの初期化
 const graphqlClient = new GraphQLClient(endpoint, {
   headers: {
     Authorization: `Bearer ${authToken.value}`,
@@ -186,13 +183,22 @@ const deleteFolder = async (id) => {
   try {
     const variables = { id }
     const response = await graphqlClient.request(DELETE_FOLDER, variables)
-    folders.value = folders.value.filter(folder => folder.id !== id)
-    console.log('フォルダ削除成功:', response)
+    console.log('GraphQL response:', response) // デバッグ用ログ
+
+    if(response.deleteFolder){
+      const deletedFolder = response.deleteFolder
+      console.log('フォルダ削除成功:', deletedFolder)
+      folders.value = folders.value.filter(folder => folder.id !== deletedFolder.id)
+    } else {
+      console.error('フォルダ削除に失敗しました。')
+      alert('フォルダの削除に失敗しました。')
+    }
   } catch (error) {
     console.error('フォルダ削除エラー:', error)
     alert('フォルダの削除に失敗しました。再度お試しください。')
   }
 }
+
 
 const selectFolder = (folderId) => {
   selectedFolderId.value = folderId

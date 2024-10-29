@@ -51,9 +51,9 @@ type Query{
 
 type Mutation {
 ##フォルダ
-    createFolder(title: String! @rules(apply:["required","max:20"])): Folder  @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@createFolder")
-    updateFolder(id: ID! @rules(apply:["required","exists:folders,id"]), title: String!): Folder @update
-    deleteFolder(id: ID! @whereKey): Folder @delete
+    createFolder(title: String! @rules(apply:["required","max:20"])): Folder @guard(with: ["sanctum"])  @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@createFolder")
+    updateFolder(id: ID! @rules(apply:["required","exists:folders,id"]), title: String!): Folder  @guard(with: ["sanctum"])  @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@updateFolder")
+    deleteFolder(id: ID! @whereKey): Folder  @guard(with: ["sanctum"])  @field(resolver: "App\\GraphQL\\Mutations\\FolderMutation@deleteFolder")
     
 
   ##タスク
