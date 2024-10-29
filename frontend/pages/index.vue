@@ -149,11 +149,16 @@ const createFolder = async () => {
   try {
     const variables = { title: title.value }
     const response = await graphqlClient.request(CREATE_FOLDER, variables)
+    console.log('GraphQL response:', response.createFolder) 
     const newFolder = response.createFolder
-    console.log(response)
-    folders.value.push(newFolder)
-    title.value = ''  
-    console.log('フォルダ作成成功:', response)
+    if(newFolder){
+      console.log('フォルダ作成成功:', newFolder)
+      folders.value.push(newFolder)
+      title.value = ''  
+    } else {
+      console.error('フォルダ作成に失敗しました。')
+      alert('フォルダの作成に失敗しました。')
+    }
   } catch (error) {
     console.error('フォルダ作成エラー:', error)
     alert('フォルダの作成に失敗しました。再度お試しください。')
