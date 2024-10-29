@@ -2,10 +2,24 @@
 import { ref, onMounted } from 'vue'
 import { gql, GraphQLClient } from 'graphql-request'
 
+
 // GraphQLエンドポイントの設定
 const endpoint = 'http://localhost:8888/graphql' 
-const graphqlClient = new GraphQLClient(endpoint)
 
+// クッキーからauth_tokenを取得
+const authToken = useCookie('auth_token')
+
+// GraphQLClientの初期化
+const graphqlClient = new GraphQLClient(endpoint, {
+  headers: {
+    Authorization: `Bearer ${authToken.value}`,
+  },
+})
+
+// 認証トークンの変更を監視してヘッダーを更新
+watch(authToken, (newToken) => {
+  graphqlClient.setHeader('Authorization', newToken ? `Bearer ${newToken}` : '')
+})
 // データの定義
 const folders = ref([])
 const title = ref("")
@@ -263,6 +277,9 @@ onMounted(() => {
     </div>
   </template>
   
+
+
+
   <style scoped>
 .error {
   color: red;

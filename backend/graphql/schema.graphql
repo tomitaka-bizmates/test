@@ -38,7 +38,7 @@ type Task {
 
 
 type Query{
-    folders(page: Int = 1, count: Int = 5): [Folder!]! @paginate(defaultCount: 5)
+    folders(page: Int = 1, count: Int = 5): [Folder!]! @guard(with: ["sanctum"]) @paginate(resolver:"App\\Graphql\\Queries\\FolderQuery@folders",defaultCount: 5)
     # tasks(folder_id:ID! @eq):[Task!]! @find
     folder(id: ID! @eq): Folder @find 
     tasks(folder_id: ID! @where, page:Int=1, count: Int=5): [Task!]! @paginate(defaultCount: 5)
