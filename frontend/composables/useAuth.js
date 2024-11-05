@@ -18,6 +18,32 @@ export function useAuth() {
     graphqlClient.setHeader('Authorization', newToken ? `Bearer ${newToken}` : '')
   })
 
+  
+  const register = async (name, email, password) => {
+    const REGISTER_MUTATION = gql`
+      mutation Register($name: String!, $email: String!, $password: String!) {
+        register(name: $name, email: $email, password: $password) {
+          user {
+            id
+            name
+            email
+          }
+          token
+        }
+      }
+    `
+    try {
+      const variables = { name, email, password }
+      const response = await graphqlClient.request(REGISTER_MUTATION, variables)
+      authToken.value = response.register.token
+      graphqlClient.setHeader('Authorization', `Bearer ${response.register.token}`)
+      return response.register.user
+    } catch (error) {
+      console.error('登録エラー:', error)
+      throw error
+    }
+  }
+
   const login = async (email, password) => {
     const LOGIN_MUTATION = gql`
       mutation Login($email: String!, $password: String!) {
@@ -31,13 +57,12 @@ export function useAuth() {
         }
       }
     `
-
     try {
       const variables = { email, password }
       const response = await graphqlClient.request(LOGIN_MUTATION, variables)
       authToken.value = response.login.token
       graphqlClient.setHeader('Authorization', `Bearer ${response.login.token}`)
-      router.push('/dashboard') // ログイン後のリダイレクト先
+      return response.login.user
     } catch (error) {
       console.error('ログインエラー:', error)
       throw error
@@ -50,10 +75,18 @@ export function useAuth() {
     router.push('/login')
   }
 
+  const isAuthenticated = ref(!!authToken.value)
+
+  watch(authToken, (newToken) => {
+    isAuthenticated.value = !!newToken
+  })
+
   return {
     authToken,
     graphqlClient,
+    register,
     login,
     logout,
+    isAuthenticated,
   }
 }
