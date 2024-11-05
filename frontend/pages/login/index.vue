@@ -2,15 +2,10 @@
 import { ref } from 'vue';
 import { gql, GraphQLClient } from 'graphql-request';
 import { useRouter } from 'vue-router';
+import { useAuth } from '~/composables/useAuth';
 
 const router = useRouter()
-const authToken = useCookie('auth_token') // クッキーを取得・設定
-const endpoint = 'http://localhost:8888/graphql'
-const graphqlClient = new GraphQLClient(endpoint, {
-  headers: {
-    Authorization: authToken.value ? `Bearer ${authToken.value}` : '',
-  },
-})
+const {authToken,graphqlClient}=useAuth()
 
 const email = ref('');
 const password = ref('');

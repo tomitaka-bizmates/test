@@ -1,23 +1,10 @@
 <script setup>
 import {gql, GraphQLClient } from 'graphql-request';
-
+import { useAuth } from '~/composables/useAuth';
 
 const router = useRouter()
 
-// クッキーの設定
-const authToken = useCookie('auth_token', {
-  // maxAge: 30 * 24 * 60 * 60, // 30日（秒単位）
-  // httpOnly: false, // falseだとフロントエンドからcookieへアクセス可能に（セキュリティに注意）
-  // secure: false, // 開発環境ではfalse、本番ではtrue
-  // sameSite: 'lax',
-})
-
-const endpoint = 'http://localhost:8888/graphql'
-const graphqlClient = new GraphQLClient(endpoint, {
-  headers: {
-    Authorization: authToken.value ? `Bearer ${authToken.value}` : '',
-  },
-})
+const{authToken,graphqlClient}=useAuth()
 
 const LOGOUT_MUTATION = gql`
   mutation Logout {

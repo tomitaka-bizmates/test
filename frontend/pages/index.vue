@@ -1,22 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { gql, GraphQLClient } from 'graphql-request'
+import { useAuth } from '~/composables/useAuth';
 
-
-const endpoint = 'http://localhost:8888/graphql' 
-
-const authToken = useCookie('auth_token')
-
-const graphqlClient = new GraphQLClient(endpoint, {
-  headers: {
-    Authorization: `Bearer ${authToken.value}`,
-  },
-})
-
-// 認証トークンの変更を監視してヘッダーを更新
-watch(authToken, (newToken) => {
-  graphqlClient.setHeader('Authorization', newToken ? `Bearer ${newToken}` : '')
-})
+const {graphqlClient}=useAuth()
 // データの定義
 const folders = ref([])
 const title = ref("")
