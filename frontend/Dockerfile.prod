@@ -1,0 +1,29 @@
+# ビルドステージ
+FROM node:20.14.0 as build-stage
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+# Nuxt.js の本番ビルド
+RUN npm run build
+
+# 実行ステージ
+FROM node:20.14.0
+WORKDIR /usr/src/app
+
+
+COPY --from=build-stage /usr/src/app/package*.json ./
+#モジュール群
+COPY --from=build-stage /usr/src/app/node_modules ./node_modules
+#Nuxt アプリケーションのビルド成果物（サーバーサイドレンダリング用のコードなど）。
+COPY --from=build-stage /usr/src/app/.output ./.output
+#静的アセット
+COPY --from=build-stage /usr/src/app/public ./public
+
+ENV NODE_ENV=production
+EXPOSE 3000
+
+CMD ["npm", "run", "start"]
