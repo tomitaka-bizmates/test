@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  backend:
+    container_name: todo-app-container-back
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    volumes:
+      - ./:/var/www
+    image: 890942158228.dkr.ecr.ap-northeast-1.amazonaws.com/tomi-todo-backend:latest
+    env_file:
+      - .env
+    # ports:
+      # - "9000:9000"
+    platform: linux/amd64
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  backend-nginx:
+    container_name: tomi-todo-backend-nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.prod
+    image: 890942158228.dkr.ecr.ap-northeast-1.amazonaws.com/tomi-todo-backend-nginx:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    platform: linux/amd64
+    volumes:
+      - ./:/var/www
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db-data:

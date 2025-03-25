@@ -1,0 +1,28 @@
+# backend/Dockerfile.dev
+FROM php:8.2-fpm
+
+# 作業ディレクトリの設定
+WORKDIR /var/www/html
+
+# カスタムphp.iniのコピー（必要なら）
+COPY docker/php/php.ini /usr/local/etc/php/php.ini
+
+# 必要なパッケージを apt でインストール
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    vim \
+    mariadb-client \
+ && docker-php-ext-install pdo_mysql zip
+
+# Composer のインストール（公式イメージからコピー）
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# （開発用はコード変更をホストからマウントするのでコピーは任意）
+# COPY . .
+
+EXPOSE 9000
+
+CMD ["php-fpm"]

@@ -1,5 +1,7 @@
 # Dockerimage の指定
 FROM php:8.2-fpm
+WORKDIR /var/www/index.html
+
 COPY php.ini /usr/local/etc/php/
 
 # Package & Library install

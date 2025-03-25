@@ -1,0 +1,12 @@
+FROM nginx:latest
+
+WORKDIR /etc/nginx
+
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+# ログレベルを info に設定
+# RUN echo 'error_log /var/log/nginx/error.log info;' >> /etc/nginx/nginx.conf
+
+EXPOSE 80
+
+
