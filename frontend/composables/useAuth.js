@@ -6,7 +6,12 @@ import { gql, GraphQLClient } from 'graphql-request'
 export function useAuth() {
   const router = useRouter()
   const authToken = useCookie('auth_token') // クッキーを取得・設定
-  const endpoint = 'http://localhost:8888/graphql'
+
+  // const config = useRuntimeConfig()
+  // const endpoint = `${config.public.apiUrl}`/graphql
+
+  const endpoint = 'http://localhost/graphql'
+
   const graphqlClient = new GraphQLClient(endpoint, {
     headers: {
       Authorization: authToken.value ? `Bearer ${authToken.value}` : '',
